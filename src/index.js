@@ -12,29 +12,47 @@ inputRef.addEventListener('input', debounce(onInputDataChange, DEBOUNCE_DELAY));
 
 function onInputDataChange(event) {
   const inputData = event.target.value.trim();
-  fetchCountries(inputData)
-    .then(useCountriesMassive)
-    .catch(error => console.log(error));
+  if (inputData === '') {
+    return;
+  }
+  fetchCountries(inputData).then(useCountriesMassive).catch(onError);
 }
 
 function useCountriesMassive(massive) {
-  const countryMarkup = makeCard(massive);
-
-  countryListRef.innerHTML = '';
-  countryInfoRef.innerHTML = countryMarkup;
+  if (massive.message === 'Page Not Found' || massive.message === 'Not Found') {
+    onError();
+  } else if (massive.length === 1) {
+    const countriesCards = makeCard(massive);
+    countryListRef.innerHTML = '';
+    countryInfoRef.innerHTML = countriesCards;
+  } else if (massive.length > 1 && massive.length <= 10) {
+    const countriesList = makeList(massive);
+    countryInfoRef.innerHTML = '';
+    countryListRef.innerHTML = countriesList;
+  } else if (massive.length > 10) {
+    Notiflix.Notify.failure(
+      'Too many matches found. Please enter a more specific name.'
+    );
+    countryInfoRef.innerHTML = '';
+    countryListRef.innerHTML = '';
+  }
 }
 
 function makeCard(massive) {
   return massive
     .map(({ name, capital, population, flags, languages }) => {
-      `
+      return `
           <div class="country-info__inner">
-            <img class="country-info__img" src="${flags.svg}" alt="${name.official}" width="60" height="30">
+            <img class="country-info__img" src="${flags.svg}" alt="${
+        name.official
+      }" width="60" height="30">
             <p class="country-info__title">${name.official}</p>
           </div>
-          <p class="country-info__desc">Capital:<span>${capital}</span></p>
-          <p class="country-info__desc">Population:<span>${population}</span></p>
-          <p class="country-info__desc">Languages:<span>${languages}</span></p>
+          <p class="country-info__desc">Capital: <span>${capital}</span></p>
+          <p class="country-info__desc">Population: <span>${population}</span></p>
+          <p class="country-info__desc">Languages: <span>${Object.values(
+            languages
+          ).join(', ')}</span></p>
       `;
     })
     .join('');
@@ -45,10 +63,17 @@ function makeList(massive) {
     .map(({ name, flags }) => {
       return `
         <li class="country-item">
-          <img class="country-info__img" src="${flags.svg}" alt="${name.official}" width="60" height="30">
+          <img class="country-info__img" src="${flags.svg}" alt="${name.official}" width="40" height="20">
           <p class="country-info__title">${name.official}</p>
         </li>
       `;
     })
     .join('');
+}
+
+function onError() {
+  Notiflix.Notify.failure('Oops, there is no country with that name');
+  console.error('Oops, there is no country with that name');
+  countryInfoRef.innerHTML = '';
+  countryListRef.innerHTML = '';
 }
